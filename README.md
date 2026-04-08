@@ -143,7 +143,7 @@ Scores are reproducible given the same model and deterministic case ordering.
 ```
 .
 ├── server # FastAPI server (environment endpoints)
-├   ├── app.py           
+│   ├── app.py           
 ├── environment.py    # SupportEnv RL loop and grader
 ├── dataset.py        # Easy / medium / hard case definitions
 ├── inference.py      # Baseline agent using OpenAI client
