@@ -15,11 +15,11 @@ class SupportEnv:
 
         # reward logic
         if action == correct:
-            reward = 1.0
+            reward = 0.9
         elif action == "ask_proof" and correct == "ask_proof":
-            reward = 0.8
+            reward = 0.5
         else:
-            reward = 0.0
+            reward = 0.1
 
         # move to next case
         self.index += 1
