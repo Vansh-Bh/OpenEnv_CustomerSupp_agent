@@ -6,7 +6,7 @@ import time
 #  REQUIRED VARIABLES 
 API_BASE_URL = os.getenv("API_BASE_URL", "dummy")
 MODEL_NAME = os.getenv("MODEL_NAME", "dummy")
-HF_TOKEN = os.getenv("HF_TOKEN", "dummy")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 # CONFIG 
 SPACE_URL = "https://arrowman123-customer-supp-env.hf.space"
