@@ -35,7 +35,8 @@ class SupportEnv:
         total = len(self.cases)
         score = self.correct_count / total if total > 0 else 0.0
 
-        return max(0.01, min(0.99, score))  # strict range
+        # ensure strict range
+        return max(0.01, min(0.99, score))
 
     def _get_obs(self):
         case = self.cases[self.index]
