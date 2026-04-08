@@ -40,7 +40,7 @@ refund / replace / reject / ask_proof
         return "reject"
 
 
-#  SAFE REQUEST 
+# SAFE REQUEST
 def safe_post(url, json=None, retries=3):
     for i in range(retries):
         try:
@@ -51,7 +51,7 @@ def safe_post(url, json=None, retries=3):
     raise Exception("Failed after retries")
 
 
-#  LOGGING 
+# LOGGING 
 def log_start(**kwargs):
     print("[START]", kwargs, flush=True)
 
@@ -62,7 +62,7 @@ def log_end(**kwargs):
     print("[END]", kwargs, flush=True)
 
 
-#  MAIN
+#  MAIN 
 async def main():
     client = OpenAI(
         base_url=API_BASE_URL,
@@ -74,12 +74,9 @@ async def main():
     task_scores = []
 
     try:
-        for task in ["easy", "medium", "hard"]:
-            # RESET TASK
-            res = safe_post(
-                f"{SPACE_URL}/reset",
-                json={"task": task}
-            )
+        # run 3 tasks
+        for _ in range(3):
+            res = safe_post(f"{SPACE_URL}/reset")
             result = res.json()
 
             state = result["observation"]["echoed_message"]
@@ -108,7 +105,7 @@ async def main():
                     error=None
                 )
 
-            #  GET TASK SCORE FROM ENV
+            #  GET SCORE FROM ENV
             score = result.get("score", 0.5)
             score = max(0.01, min(0.99, score))
 
@@ -128,6 +125,5 @@ async def main():
         )
 
 
-# ENTRY 
 if __name__ == "__main__":
     asyncio.run(main())
