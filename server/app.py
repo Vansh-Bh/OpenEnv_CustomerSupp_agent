@@ -69,7 +69,7 @@ def reset(req: Optional[ResetRequest] = None):
 
     obs = env.reset()
 
-    return {"observation": {"echoed_message": obs}, "reward": 0.0, "done": False}
+    return {"observation": {"echoed_message": obs}, "reward": 0.01, "done": False}
 
 
 # STATE
@@ -91,7 +91,7 @@ def step(action: Action):
     if env is None:
         return {
             "observation": {"echoed_message": "Error: Environment not initialized."},
-            "reward": 0.0,
+            "reward": 0.01,
             "done": True,
         }
 
