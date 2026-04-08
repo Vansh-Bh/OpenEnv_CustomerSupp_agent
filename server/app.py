@@ -5,14 +5,14 @@ from dataset import easy_cases, medium_cases, hard_cases
 
 app = FastAPI()
 
-#Models 
+#  Models
 class Action(BaseModel):
     message: str
 
 class ResetRequest(BaseModel):
     task: str = "easy"
 
-#  Parser 
+# Parser 
 def parse_action(message):
     message = message.lower()
 
@@ -27,7 +27,7 @@ def parse_action(message):
     else:
         return "reject"
 
-#  TASKS 
+# TASKS 
 TASKS = {
     "easy": easy_cases,
     "medium": medium_cases,
@@ -41,10 +41,9 @@ env = None
 def reset(req: ResetRequest):
     global env
 
-    task = req.task
-    cases = TASKS.get(task, easy_cases)
-
+    cases = TASKS.get(req.task, easy_cases)
     env = SupportEnv(cases)
+
     obs = env.reset()
 
     return {
@@ -53,18 +52,24 @@ def reset(req: ResetRequest):
         "done": False
     }
 
-# STEP 
+#STEP
 @app.post("/step")
 def step(action: Action):
     parsed_action = parse_action(action.message)
 
     obs, reward, done = env.step(parsed_action)
 
-    return {
+    response = {
         "observation": {"echoed_message": obs},
         "reward": reward,
         "done": done
     }
+
+    #  RETURN TASK SCORE
+    if done:
+        response["score"] = env.get_score()
+
+    return response
 
 def main():
     import uvicorn
