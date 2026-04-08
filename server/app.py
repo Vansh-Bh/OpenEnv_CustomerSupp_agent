@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import Optional
 from environment import SupportEnv
 from dataset import easy_cases, medium_cases, hard_cases
-from typing import Optional
 
 app = FastAPI()
 
-#  Models
+# Models 
 class Action(BaseModel):
     message: str
 
@@ -28,26 +28,29 @@ def parse_action(message):
     else:
         return "reject"
 
-# TASKS 
+#  TASKS 
 TASKS = {
     "easy": easy_cases,
     "medium": medium_cases,
     "hard": hard_cases
 }
 
+# AUTO TASK CYCLING
+TASK_SEQUENCE = ["easy", "medium", "hard"]
+current_task_index = 0
+
 env = None
 
-# RESET
+# RESET 
 @app.post("/reset")
 def reset(req: Optional[ResetRequest] = None):
-    global env
+    global env, current_task_index
 
-    # HANDLE MISSING BODY
-    task = "easy"
-    if req is not None and req.task:
-        task = req.task
+    # IGNORE BODY → AUTO CYCLE TASKS
+    task = TASK_SEQUENCE[current_task_index]
+    current_task_index = (current_task_index + 1) % 3
 
-    cases = TASKS.get(task, easy_cases)
+    cases = TASKS[task]
     env = SupportEnv(cases)
 
     obs = env.reset()
@@ -58,7 +61,7 @@ def reset(req: Optional[ResetRequest] = None):
         "done": False
     }
 
-#STEP
+#  STEP
 @app.post("/step")
 def step(action: Action):
     parsed_action = parse_action(action.message)
@@ -71,7 +74,7 @@ def step(action: Action):
         "done": done
     }
 
-    #  RETURN TASK SCORE
+    #  RETURN SCORE PER TASK
     if done:
         response["score"] = env.get_score()
 
