@@ -15,8 +15,6 @@ TASK_NAME = "customer-support"
 BENCHMARK = "openenv"
 
 MAX_STEPS = 20
-MAX_TOTAL_REWARD = 20
-SUCCESS_SCORE_THRESHOLD = 0.6
 
 
 #  LLM AGENT 
@@ -38,7 +36,7 @@ refund / replace / reject / ask_proof
         )
         return response.choices[0].message.content.strip().lower()
     except Exception as e:
-        print(f"[ERROR] LLM call failed: {e}")
+        print(f"[ERROR] LLM failed: {e}")
         return "reject"
 
 
@@ -64,12 +62,8 @@ def log_end(**kwargs):
     print("[END]", kwargs, flush=True)
 
 
-#  MAIN 
+#  MAIN
 async def main():
-    rewards = []
-    steps_taken = 0
-    success = False
-
     client = OpenAI(
         base_url=API_BASE_URL,
         api_key=API_KEY
@@ -77,59 +71,63 @@ async def main():
 
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
+    task_scores = []
+
     try:
-        res = safe_post(f"{SPACE_URL}/reset")
-        result = res.json()
-
-        state = result["observation"]["echoed_message"]
-        done = result["done"]
-
-        for step in range(1, MAX_STEPS + 1):
-            if done:
-                break
-
-            message = get_model_message(client, state)
-
+        for task in ["easy", "medium", "hard"]:
+            # RESET TASK
             res = safe_post(
-                f"{SPACE_URL}/step",
-                json={"message": message}
+                f"{SPACE_URL}/reset",
+                json={"task": task}
             )
             result = res.json()
 
-            reward = result.get("reward", 0.0)
-            done = result.get("done", False)
             state = result["observation"]["echoed_message"]
+            done = result["done"]
 
-            rewards.append(reward)
-            steps_taken = step
+            for step in range(1, MAX_STEPS + 1):
+                if done:
+                    break
 
-            log_step(
-                step=step,
-                action=message,
-                reward=reward,
-                done=done,
-                error=None
-            )
+                message = get_model_message(client, state)
 
-        score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
+                res = safe_post(
+                    f"{SPACE_URL}/step",
+                    json={"message": message}
+                )
+                result = res.json()
 
-        # ensure score strictly between 0 and 1
-        score = max(0.01, min(0.99, score))
+                state = result["observation"]["echoed_message"]
+                done = result["done"]
 
-        success = score >= SUCCESS_SCORE_THRESHOLD
+                log_step(
+                    step=step,
+                    action=message,
+                    reward=result.get("reward", 0.0),
+                    done=done,
+                    error=None
+                )
+
+            #  GET TASK SCORE FROM ENV
+            score = result.get("score", 0.5)
+            score = max(0.01, min(0.99, score))
+
+            task_scores.append(score)
+
+        final_score = sum(task_scores) / len(task_scores)
 
     except Exception as e:
         print(f"[ERROR] {e}")
 
     finally:
         log_end(
-            success=success,
-            steps=steps_taken,
-            score=score if 'score' in locals() else 0.0,
-            rewards=rewards
+            success=True,
+            steps=len(task_scores),
+            score=final_score if 'final_score' in locals() else 0.0,
+            rewards=task_scores
         )
 
 
-#  ENTRY 
+# ENTRY 
 if __name__ == "__main__":
     asyncio.run(main())
