@@ -8,28 +8,23 @@ from environment import SupportEnv
 
 app = FastAPI()
 
-
-# Models
+# --- Models ---
 class Action(BaseModel):
     message: str
-
 
 class ResetRequest(BaseModel):
     task: str = "easy"
 
-
 class Observation(BaseModel):
     echoed_message: str
-
 
 class StepResponse(BaseModel):
     observation: Observation
     reward: float
     done: bool
-    score: Optional[float] = None
+    info: dict = {}
 
-
-# Parser
+# --- Parser ---
 def parse_action(message):
     message = message.lower()
 
@@ -44,33 +39,31 @@ def parse_action(message):
     else:
         return "reject"
 
-
-#  TASKS
+# --- TASKS ---
 TASKS = {"easy": easy_cases, "medium": medium_cases, "hard": hard_cases}
-
-# AUTO TASK CYCLING
-TASK_SEQUENCE = ["easy", "medium", "hard"]
-current_task_index = 0
 
 env = None
 
+# --- Routes ---
 
 # RESET
 @app.post("/reset")
 def reset(req: Optional[ResetRequest] = None):
-    global env, current_task_index
+    global env
+    
+    task_name = req.task if req and req.task in TASKS else "easy"
 
-    # IGNORE BODY → AUTO CYCLE TASKS
-    task = TASK_SEQUENCE[current_task_index]
-    current_task_index = (current_task_index + 1) % 3
-
-    cases = TASKS[task]
+    cases = TASKS[task_name]
     env = SupportEnv(cases)
 
     obs = env.reset()
 
-    return {"observation": {"echoed_message": obs}, "reward": 0.05, "done": False}
-
+    return {
+        "observation": {"echoed_message": obs}, 
+        "reward": 0.0, 
+        "done": False, 
+        "info": {}
+    }
 
 # STATE
 @app.get("/state")
@@ -81,8 +74,7 @@ def get_state():
 
     return {"observation": {"echoed_message": env._get_obs()}}
 
-
-#  STEP
+# STEP
 @app.post("/step", response_model=StepResponse)
 def step(action: Action):
     global env
@@ -91,30 +83,31 @@ def step(action: Action):
     if env is None:
         return {
             "observation": {"echoed_message": "Error: Environment not initialized."},
-            "reward": 0.05,
+            "reward": 0.0,
             "done": True,
+            "info": {}
         }
 
     parsed_action = parse_action(action.message)
 
     obs, reward, done = env.step(parsed_action)
 
-    response = {"observation": {"echoed_message": obs}, "reward": reward, "done": done}
+    response = {
+        "observation": {"echoed_message": obs}, 
+        "reward": reward, 
+        "done": done, 
+        "info": {}
+    }
 
-    # RETURN SCORE PER TASK
     if done:
-        response["score"] = env.get_score()
+        response["info"]["score"] = float(env.get_score())
 
     return response
 
-
+# --- Main ---
 def main():
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=7860)
 
-
-if __name__ == "__main__":
-    main()
 if __name__ == "__main__":
     main()
